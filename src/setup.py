@@ -11,9 +11,10 @@ with open(os.path.join(here, 'CHANGES.txt')) as f:
 requires = [
     'gunicorn',
     'pyramid',
+    'cornice',
     #'pyramid_jinja2',
     'pyramid_debugtoolbar',
-    'waitress',
+    #'waitress',
     ]
 
 tests_require = [

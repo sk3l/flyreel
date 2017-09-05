@@ -1,6 +1,8 @@
 
+import concurrent.futures
 import logging
 
+from github         import Github
 from pyramid.view   import view_config
 from cornice        import Service
 
@@ -16,13 +18,17 @@ flyreel_srv = Service(name="fs",
 #def get_val(request):
 #    return _VALUES.get(request.matchdict['val'])
 
+FUTURE_LST= []
+PROC_POOL = concurrent.futures.ProcessPoolExecutor(max_workers=4)
+
+GITHUB_TOKEN = "54c5646df5d082317ae012c3a97ff9b424dc7ed0"
 
 @flyreel_srv.post()
 def notify_repo(request):
     #key = request.matchdict['val']
 
     try:
-        #import pdb;pdb.set_trace()
+        import pdb;pdb.set_trace()
 
         logging.debug("Received request =>\t""{0}""".format(request.body))
 
@@ -45,10 +51,42 @@ def notify_repo(request):
                 "Received create event for repository '{0}'".format(
                     repo_data['repository']['name']))
 
-    except ValueError:
+        #FUTURE_LST.append(
+        #        PROC_POOL.submit(process_create_event, repo_data))
+
+        process_create_event(repo_data)
+    except ValueError as err:
+        logging.error(
+                "Encountered error in repo notification POST handler: {0}".format(
+                    err))
         return False
 
     return True
+
+def process_create_event(repo_evt_json):
+    try:
+        #import pdb;pdb.set_trace()
+        repo_name = repo_evt_json['repository']['full_name']
+
+        logging.debug(
+            "Process pool executing event for '{0}'".format(
+                repo_name))
+
+        gh_inst = Github(GITHUB_TOKEN)
+
+        repo = gh_inst.get_repo(repo_name)
+        if not repo:
+            raise Exception("Could not locate repository '{0}'".format(
+                repo_name))
+
+        logging.info("Located repo, master branch ='{0}'".format(
+            repo.master_branch))
+
+    except Exception as err:
+        logging.error(
+                "Encountered error in process pool handler: {0}".format(
+                    err))
+
 
 #@view_config(route_name='test', renderer='json')
 #def my_view_2(request):

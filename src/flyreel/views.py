@@ -1,4 +1,5 @@
 
+import base64
 import concurrent.futures
 import logging
 import os
@@ -23,6 +24,7 @@ FUTURE_LST= []
 PROC_POOL = concurrent.futures.ProcessPoolExecutor(max_workers=4)
 
 GITHUB_TOKEN = os.path.abspath(os.path.dirname(__file__)) + "/token.txt"
+README_FILE = os.path.abspath(os.path.dirname(__file__)) + "/README.md"
 
 @flyreel_srv.post()
 def notify_repo(request):
@@ -81,14 +83,16 @@ def process_create_event(repo_evt_json):
                 repo_name))
 
         clone_url = repo.clone_url
-
         logging.info("Located repo at url '{0}'".format(clone_url))
+
+        logging.info("Commiting initial README")
+        readme_str = read_README(README_FILE)
+        result = repo.create_file("/README.md", "Initial commit", readme_str)
 
     except Exception as err:
         logging.error(
                 "Encountered error in process pool handler: {0}".format(
                     err))
-
 
 def read_token(token_path):
 
@@ -97,6 +101,14 @@ def read_token(token_path):
         token = str(token_file.read()).strip()
 
     return token
+
+def read_README(readme_path):
+
+    readme = ""
+    with open(readme_path, "r") as readme_file:
+        readme = readme_file.read()
+
+    return readme
 
 #@view_config(route_name='test', renderer='json')
 #def my_view_2(request):

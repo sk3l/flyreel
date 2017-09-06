@@ -1,6 +1,7 @@
 
 import concurrent.futures
 import logging
+import os
 
 from github         import Github
 from pyramid.view   import view_config
@@ -21,14 +22,14 @@ flyreel_srv = Service(name="fs",
 FUTURE_LST= []
 PROC_POOL = concurrent.futures.ProcessPoolExecutor(max_workers=4)
 
-GITHUB_TOKEN = "54c5646df5d082317ae012c3a97ff9b424dc7ed0"
+GITHUB_TOKEN = os.path.abspath(os.path.dirname(__file__)) + "/token.txt"
 
 @flyreel_srv.post()
 def notify_repo(request):
     #key = request.matchdict['val']
 
     try:
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
 
         logging.debug("Received request =>\t""{0}""".format(request.body))
 
@@ -65,28 +66,37 @@ def notify_repo(request):
 
 def process_create_event(repo_evt_json):
     try:
-        #import pdb;pdb.set_trace()
+        import pdb;pdb.set_trace()
         repo_name = repo_evt_json['repository']['full_name']
 
         logging.debug(
             "Process pool executing event for '{0}'".format(
                 repo_name))
 
-        gh_inst = Github(GITHUB_TOKEN)
+        gh_inst = Github(read_token(GITHUB_TOKEN))
 
         repo = gh_inst.get_repo(repo_name)
         if not repo:
             raise Exception("Could not locate repository '{0}'".format(
                 repo_name))
 
-        logging.info("Located repo, master branch ='{0}'".format(
-            repo.master_branch))
+        clone_url = repo.clone_url
+
+        logging.info("Located repo at url '{0}'".format(clone_url))
 
     except Exception as err:
         logging.error(
                 "Encountered error in process pool handler: {0}".format(
                     err))
 
+
+def read_token(token_path):
+
+    token = ""
+    with open(token_path, "r") as token_file:
+        token = str(token_file.read()).strip()
+
+    return token
 
 #@view_config(route_name='test', renderer='json')
 #def my_view_2(request):

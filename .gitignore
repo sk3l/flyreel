@@ -1,5 +1,6 @@
 # custom files 'n paths
-test/logs/
+src/flyreel/token.txt
+test/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

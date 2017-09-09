@@ -13,7 +13,7 @@ requires = [
     'pyramid',
     'cornice',
     #'pyramid_jinja2',
-    'pyramid_debugtoolbar',
+    #'pyramid_debugtoolbar',
     #'waitress',
     ]
 

@@ -76,7 +76,9 @@ def process_create_event(repo_evt_json):
             "Process pool executing event for '{0}'".format(
                 repo_name))
 
-        gh_inst = Github(read_token(GITHUB_TOKEN))
+        # Need special URL for BBGitHub
+        url = "https://bbgithub.dev.bloomberg.com/api/v3" 
+        gh_inst = Github(login_or_token=read_token(GITHUB_TOKEN), base_url=url)
 
         repo = gh_inst.get_repo(repo_name)
         if not repo:

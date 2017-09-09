@@ -1,6 +1,7 @@
 
 import base64
 import concurrent.futures
+import json
 import logging
 import os
 
@@ -54,10 +55,10 @@ def notify_repo(request):
                 "Received create event for repository '{0}'".format(
                     repo_data['repository']['name']))
 
-        #FUTURE_LST.append(
-        #        PROC_POOL.submit(process_create_event, repo_data))
+        FUTURE_LST.append(
+                PROC_POOL.submit(process_create_event, repo_data))
 
-        process_create_event(repo_data)
+        #process_create_event(repo_data)
     except ValueError as err:
         logging.error(
                 "Encountered error in repo notification POST handler: {0}".format(
@@ -68,7 +69,7 @@ def notify_repo(request):
 
 def process_create_event(repo_evt_json):
     try:
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         repo_name = repo_evt_json['repository']['full_name']
 
         logging.debug(
@@ -85,9 +86,27 @@ def process_create_event(repo_evt_json):
         clone_url = repo.clone_url
         logging.info("Located repo at url '{0}'".format(clone_url))
 
+        # Use first commit add README
         logging.info("Commiting initial README")
         readme_str = read_README(README_FILE)
         result = repo.create_file("/README.md", "Initial commit", readme_str)
+
+        commit = result['commit'] 
+        logging.debug("Using sha='{0}' as first commit".format(commit))
+
+        # Create an "unstable" branch/ref
+        logging.info("Creating 'unstable' branch")
+        unstable_commit = repo.create_git_ref(
+                            "refs/heads/unstable",
+                            commit.sha)
+
+        # Create a "test" branch/ref
+        logging.info("Creating 'test' branch")
+        unstable_commit = repo.create_git_ref(
+                            "refs/heads/test",
+                            commit.sha)
+      
+        logging.info("Successfully initialized new repo '{0}'.".format(repo_name))
 
     except Exception as err:
         logging.error(

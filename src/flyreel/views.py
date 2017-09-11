@@ -26,6 +26,7 @@ PROC_POOL = concurrent.futures.ProcessPoolExecutor(max_workers=4)
 
 GITHUB_TOKEN = os.path.abspath(os.path.dirname(__file__)) + "/token.txt"
 README_FILE = os.path.abspath(os.path.dirname(__file__)) + "/README.md"
+TEAM_SET = {"CISFTP" : True}
 
 @flyreel_srv.post()
 def notify_repo(request):
@@ -79,6 +80,23 @@ def process_create_event(repo_evt_json):
         # Need special URL for BBGitHub
         url = "https://bbgithub.dev.bloomberg.com/api/v3" 
         gh_inst = Github(login_or_token=read_token(GITHUB_TOKEN), base_url=url)
+
+        # Check team membership
+        user = gh_inst.get_user()
+        logging.debug("Received event notification from user '{0}'".format(
+            user.name))
+
+        on_our_team = False
+        team_list = user.get_teams()
+        for team in team_list:
+            logging.debug("Checking relevance of team '{0}'".format(team.name))
+            if team.name in TEAM_SET:
+                on_our_team = TEAM_SET[team.name]
+
+        if not on_our_team:
+            logging.info("User {0} is not on a team of interest; skipping event.".format(
+                user.name))
+            return
 
         repo = gh_inst.get_repo(repo_name)
         if not repo:

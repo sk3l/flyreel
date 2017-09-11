@@ -26,7 +26,7 @@ PROC_POOL = concurrent.futures.ProcessPoolExecutor(max_workers=4)
 
 GITHUB_TOKEN = os.path.abspath(os.path.dirname(__file__)) + "/token.txt"
 README_FILE = os.path.abspath(os.path.dirname(__file__)) + "/README.md"
-TEAM_SET = {"CISFTP" : True}
+TEAM_SET = {"SFTP" : True}
 
 @flyreel_srv.post()
 def notify_repo(request):

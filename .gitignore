@@ -1,5 +1,6 @@
 # custom files 'n paths
 src/flyreel/token.txt
+src/flyreel/secret.txt
 test/
 
 # Byte-compiled / optimized / DLL files

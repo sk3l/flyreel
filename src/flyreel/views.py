@@ -1,6 +1,8 @@
 
 import base64
 import concurrent.futures
+import hmac
+import hashlib
 import json
 import logging
 import os
@@ -24,6 +26,7 @@ flyreel_srv = Service(name="fs",
 FUTURE_LST= []
 PROC_POOL = concurrent.futures.ProcessPoolExecutor(max_workers=4)
 
+GITHUB_SECRET = os.path.abspath(os.path.dirname(__file__)) + "/secret.txt"
 GITHUB_TOKEN = os.path.abspath(os.path.dirname(__file__)) + "/token.txt"
 README_FILE = os.path.abspath(os.path.dirname(__file__)) + "/README.md"
 
@@ -34,20 +37,34 @@ def notify_repo(request):
     try:
         #import pdb;pdb.set_trace()
 
-        logging.debug("Received request =>\t""{0}""".format(request.body))
+        logging.info("Received a request from ""{0}""".format(request.client_addr))
+
+        logging.debug("Validating request source")
+        if not 'X-Hub-Signature' in request.headers:
+            logging.warn("Could not locate GitHub signature header in request.")
+            return False
+
+        if not verify_github_secret(
+                request.body,
+                read_secret(GITHUB_SECRET),
+                request.headers['X-Hub-Signature']):
+            logging.warn("WARNING!!! - received incorrect HMAC from request source (potential attacker?)")
+            return False
+
+        logging.debug("Request payload =>\t""{0}""".format(request.body))
 
         if len(request.body) < 1:
-            logging.error("Received empty POST")
+            logging.warn("Received empty POST")
             return False
 
         repo_data = request.json_body
 
         if "action" not in repo_data:
-            logging.error("Received invalid request (missing 'action' key)")
+            logging.warn("Received invalid request (missing 'action' key)")
             return False
         elif repo_data['action'] != 'created':
             logging.info(
-                    "Received inconsequential request (action='{0}')".format(
+                    "Received inconsequential request, action='{0}; ignoring')".format(
                         repo_data['action']))
             return False
 
@@ -91,7 +108,7 @@ def process_create_event(repo_evt_json):
         readme_str = read_README(README_FILE)
         result = repo.create_file("/README.md", "Initial commit", readme_str)
 
-        commit = result['commit'] 
+        commit = result['commit']
         logging.debug("Using sha='{0}' as first commit".format(commit))
 
         # Create an "unstable" branch/ref
@@ -105,7 +122,7 @@ def process_create_event(repo_evt_json):
         unstable_commit = repo.create_git_ref(
                             "refs/heads/test",
                             commit.sha)
-      
+
         logging.info("Successfully initialized new repo '{0}'.".format(repo_name))
 
     except Exception as err:
@@ -121,6 +138,14 @@ def read_token(token_path):
 
     return token
 
+def read_secret(secret_path):
+
+    secret = ""
+    with open(secret_path, "r") as secret_file:
+        secret = str(secret_file.read()).strip()
+
+    return secret.encode('utf-8')
+
 def read_README(readme_path):
 
     readme = ""
@@ -128,6 +153,15 @@ def read_README(readme_path):
         readme = readme_file.read()
 
     return readme
+
+def verify_github_secret(payload, secret, their_digest):
+
+    my_hmac = hmac.new(secret, payload, hashlib.sha1)
+
+    my_sha = my_hmac.hexdigest()
+    their_sha = their_digest[str.find(their_digest, "=") + 1:]
+
+    return hmac.compare_digest(my_sha, their_sha)
 
 #@view_config(route_name='test', renderer='json')
 #def my_view_2(request):
